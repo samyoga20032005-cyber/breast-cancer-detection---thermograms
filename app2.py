@@ -12,6 +12,7 @@ from tensorflow.keras.layers import InputLayer
 import joblib
 import os
 import warnings
+from huggingface_hub import hf_hub_download
 warnings.filterwarnings('ignore')
 
 # -------------------------------------------------------------------
@@ -71,59 +72,54 @@ def score_cam(model, img_array, last_conv_layer_name='block5_conv3', class_index
     return cam
 # -------------------------------------------------------------------
 # Load models (cached)
+# Load models (cached)
 @st.cache_resource
 def load_models():
-    model_path = 'models/'
-    if not os.path.exists(model_path):
-        st.error(f"❌ Models folder not found at '{model_path}'")
-        return None
+    from huggingface_hub import hf_hub_download
+    import os
 
-    # We'll use the .keras files (the original saved ones)
-    required = [
-        'feature_extractor.keras',
-        'breast_cancer_model.keras',
-        'ridge_clf.pkl',
-        'lda_clf.pkl',
-        'extra_clf.pkl',
-        'lgbm_clf.pkl',
-        'cs_selector.pkl',
-        'ga_selected_idx.npy'
-    ]
-    missing = [f for f in required if not os.path.exists(os.path.join(model_path, f))]
-    if missing:
-        st.error(f"Missing files: {', '.join(missing)}")
-        return None
+    # === 1. Define your Hugging Face repository ===
+    REPO_ID = "yooog/breast-cancer-models"   # <-- CHANGE THIS TO YOUR USERNAME/REPO NAME
 
     try:
-        with st.spinner("Loading models..."):
-            feature_extractor = load_model(
-                os.path.join(model_path, 'feature_extractor.keras'),
-                custom_objects=custom_objects,
-                compile=False
-            )
-            full_model = load_model(
-                os.path.join(model_path, 'breast_cancer_model.keras'),
-                custom_objects=custom_objects,
-                compile=False
-            )
+        with st.spinner("Downloading model files from Hugging Face..."):
+            # === 2. Download each file ===
+            feature_extractor_path = hf_hub_download(repo_id=REPO_ID, filename="feature_extractor.keras")
+            full_model_path = hf_hub_download(repo_id=REPO_ID, filename="breast_cancer_model.keras")
+            ridge_path = hf_hub_download(repo_id=REPO_ID, filename="ridge_clf.pkl")
+            lda_path = hf_hub_download(repo_id=REPO_ID, filename="lda_clf.pkl")
+            extra_path = hf_hub_download(repo_id=REPO_ID, filename="extra_clf.pkl")
+            lgbm_path = hf_hub_download(repo_id=REPO_ID, filename="lgbm_clf.pkl")
+            cs_selector_path = hf_hub_download(repo_id=REPO_ID, filename="cs_selector.pkl")
+            ga_idx_path = hf_hub_download(repo_id=REPO_ID, filename="ga_selected_idx.npy")
 
-            ridge = joblib.load(os.path.join(model_path, 'ridge_clf.pkl'))
-            lda = joblib.load(os.path.join(model_path, 'lda_clf.pkl'))
-            extra = joblib.load(os.path.join(model_path, 'extra_clf.pkl'))
-            lgbm = joblib.load(os.path.join(model_path, 'lgbm_clf.pkl'))
+        # === 3. Load the models using the downloaded paths ===
+        with st.spinner("Loading models into memory..."):
+            feature_extractor = load_model(feature_extractor_path, custom_objects=custom_objects, compile=False)
+            full_model = load_model(full_model_path, custom_objects=custom_objects, compile=False)
 
-            cs_selector = joblib.load(os.path.join(model_path, 'cs_selector.pkl'))
-            ga_idx = np.load(os.path.join(model_path, 'ga_selected_idx.npy'))
+            ridge = joblib.load(ridge_path)
+            lda = joblib.load(lda_path)
+            extra = joblib.load(extra_path)
+            lgbm = joblib.load(lgbm_path)
+
+            cs_selector = joblib.load(cs_selector_path)
+            ga_idx = np.load(ga_idx_path)
 
             threshold = 0.5
-            if os.path.exists(os.path.join(model_path, 'best_threshold.npy')):
-                threshold = np.load(os.path.join(model_path, 'best_threshold.npy')).item()
+            # If you have a best_threshold.npy file, uncomment these lines:
+            # threshold_path = hf_hub_download(repo_id=REPO_ID, filename="best_threshold.npy")
+            # threshold = np.load(threshold_path).item()
 
-        # Optional debug info (can be removed)
-        #st.sidebar.write(f"ridge type: {type(ridge)}")
-        #st.sidebar.write(f"lda type: {type(lda)}")
-        #st.sidebar.write(f"extra type: {type(extra)}")
-        #st.sidebar.write(f"lgbm type: {type(lgbm)}")
+        # === 4. Delete temporary downloaded files to save space (optional) ===
+        os.remove(feature_extractor_path)
+        os.remove(full_model_path)
+        os.remove(ridge_path)
+        os.remove(lda_path)
+        os.remove(extra_path)
+        os.remove(lgbm_path)
+        os.remove(cs_selector_path)
+        os.remove(ga_idx_path)
 
         st.success("✅ All models loaded successfully!")
         return {
@@ -135,7 +131,6 @@ def load_models():
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
         return None
-
 # -------------------------------------------------------------------
 # Prediction function (with fallback for Ridge)
 def predict_image(image, models):
