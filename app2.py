@@ -77,21 +77,21 @@ def score_cam(model, img_array, last_conv_layer_name='block5_conv3', class_index
 def load_models():
     from huggingface_hub import hf_hub_download
     import os
-
+    hf_token = st.secrets["HF_TOKEN"]
     # === 1. Define your Hugging Face repository ===
-    REPO_ID = "yooog/breast-cancer-models"   # <-- CHANGE THIS TO YOUR USERNAME/REPO NAME
+    REPO_ID = "yoooog/breast-cancer-models"   # <-- CHANGE THIS TO YOUR USERNAME/REPO NAME
 
     try:
         with st.spinner("Downloading model files from Hugging Face..."):
             # === 2. Download each file ===
-            feature_extractor_path = hf_hub_download(repo_id=REPO_ID, filename="feature_extractor.keras")
-            full_model_path = hf_hub_download(repo_id=REPO_ID, filename="breast_cancer_model.keras")
-            ridge_path = hf_hub_download(repo_id=REPO_ID, filename="ridge_clf.pkl")
-            lda_path = hf_hub_download(repo_id=REPO_ID, filename="lda_clf.pkl")
-            extra_path = hf_hub_download(repo_id=REPO_ID, filename="extra_clf.pkl")
-            lgbm_path = hf_hub_download(repo_id=REPO_ID, filename="lgbm_clf.pkl")
-            cs_selector_path = hf_hub_download(repo_id=REPO_ID, filename="cs_selector.pkl")
-            ga_idx_path = hf_hub_download(repo_id=REPO_ID, filename="ga_selected_idx.npy")
+            feature_extractor_path = hf_hub_download(repo_id=REPO_ID, filename="feature_extractor.keras", token=hf_token)
+            full_model_path = hf_hub_download(repo_id=REPO_ID, filename="breast_cancer_model.keras", token=hf_token)
+            ridge_path = hf_hub_download(repo_id=REPO_ID, filename="ridge_clf.pkl", token=hf_token)
+            lda_path = hf_hub_download(repo_id=REPO_ID, filename="lda_clf.pkl", token=hf_token)
+            extra_path = hf_hub_download(repo_id=REPO_ID, filename="extra_clf.pkl", token=hf_token)
+            lgbm_path = hf_hub_download(repo_id=REPO_ID, filename="lgbm_clf.pkl", token=hf_token)
+            cs_selector_path = hf_hub_download(repo_id=REPO_ID, filename="cs_selector.pkl", token=hf_token)
+            ga_idx_path = hf_hub_download(repo_id=REPO_ID, filename="ga_selected_idx.npy", token=hf_token)
 
         # === 3. Load the models using the downloaded paths ===
         with st.spinner("Loading models into memory..."):
